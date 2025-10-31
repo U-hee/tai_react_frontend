@@ -29,10 +29,20 @@ export function FilterBar({
           onChange={(e) => onTimeFilterChange(e.target.value)}
           className="appearance-none pl-4 pr-10 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
         >
-          <option value="24h">지난 24시간</option>
-          <option value="12h">지난 12시간</option>
-          <option value="6h">지난 6시간</option>
-          <option value="1h">지난 1시간</option>
+          <option value="0">현재 시간</option>
+          <option value="1">1시간 전</option>
+          <option value="2">2시간 전</option>
+          <option value="3">3시간 전</option>
+          <option value="4">4시간 전</option>
+          <option value="5">5시간 전</option>
+          <option value="6">6시간 전</option>
+          <option value="7">7시간 전</option>
+          <option value="8">8시간 전</option>
+          <option value="9">9시간 전</option>
+          <option value="10">10시간 전</option>
+          <option value="11">11시간 전</option>
+          <option value="12">12시간 전</option>
+          <option value="24">24시간 전</option>
         </select>
         <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
       </div>

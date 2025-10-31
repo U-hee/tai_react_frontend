@@ -1,60 +1,116 @@
+import { useState, useEffect } from 'react';
 import { ArrowLeft, TrendingUp, Share2, Bookmark, Sparkles } from 'lucide-react';
-import { TrendingData } from './TrendingItem';
+import { useParams, useNavigate } from 'react-router-dom';
+import api from '../api/axiosConfig';
 
-interface TrendingDetailProps {
-  data: TrendingData;
-  onBack: () => void;
+interface LLMResult {
+  keyword: string;
+  description: string;
+  content: string;
+  tags: string[];
+  category: string;
+  refered: string[];
 }
 
-export function TrendingDetail({ data, onBack }: TrendingDetailProps) {
-  // Mock AI summary based on category
-  const getAISummary = () => {
-    switch (data.category) {
-      case '스포츠':
-        return {
-          summary: `토트넘 홋스퍼의 주장 손흥민이 프리미어리그 홈경기에서 맹활약을 펼쳤습니다. 전반 23분 첫 골을 시작으로 후반 15분, 38분에 추가 골을 성공시키며 완벽한 해트트릭을 달성했습니다. 이번 해트트릭은 손흥민의 프리미어리그 통산 4번째 해트트릭이며, 이번 시즌 첫 해트트릭입니다. 경기 후 인터뷰에서 손흥민은 "팀 동료들의 도움 덕분에 좋은 결과를 낼 수 있었다"며 겸손한 모습을 보였습니다. 토트넘은 이번 승리로 리그 1위로 올라서며 우승 경쟁에 청신호를 켰습니다.`,
-          sources: 15,
-          keyPoints: ['시즌 첫 해트트릭 달성', '프리미어리그 통산 4번째', '토트넘 리그 1위 등극'],
-        };
-      case '기술':
-        return {
-          summary: `OpenAI가 공식적으로 GPT-5 모델을 출시했습니다. 새로운 모델은 이전 GPT-4 대비 추론 능력이 40% 향상되었으며, 멀티모달 처리 성능이 크게 개선되었습니다. 특히 이미지 생성 및 분석, 영상 이해, 음성 합성 분야에서 두드러진 발전을 보였습니다. GPT-5는 더욱 긴 컨텍스트 윈도우를 지원하여 최대 100만 토큰까지 처리 가능하며, 실시간 대화 능력도 강화되었습니다. 산업 전문가들은 이번 출시가 AI 산업에 새로운 전환점이 될 것으로 전망하고 있습니다.`,
-          sources: 23,
-          keyPoints: ['추론 능력 40% 향상', '멀티모달 기능 강화', '100만 토큰 컨텍스트 지원'],
-        };
-      case '자동차':
-        return {
-          summary: `코엑스에서 개최된 2025 서울 모빌리티 쇼에는 국내외 주요 자동차 제조사들이 참가하여 미래 모빌리티 기술을 선보였습니다. 현대자동차는 차세대 전기차 아이오닉 9를 공개했으며, 기아는 완전 자율주행 기술이 적용된 콘셉트카를 전시했습니다. 특히 배터리 기술의 혁신이 주목받았는데, 10분 충전으로 500km 주행이 가능한 차세대 배터리가 공개되었습니다. 이번 모터쇼는 역대 최대 규모로 진행되었으며, 5일간 약 30만 명의 관람객이 방문할 것으로 예상됩니다.`,
-          sources: 18,
-          keyPoints: ['아이오닉 9 세계 최초 공개', '10분 충전 500km 주행 배터리', '예상 관람객 30만 명'],
-        };
-      default:
-        return {
-          summary: `${data.title}에 대한 주요 기사들을 분석한 결과, 해당 키워드는 최근 24시간 동안 급격한 관심 증가를 보이고 있습니다. 여러 언론사에서 다양한 관점으로 보도하고 있으며, SNS를 중심으로 활발한 논의가 이루어지고 있습니다. ${data.description} 전문가들은 이번 이슈가 단기적인 화제에 그치지 않고 중장기적으로 지속될 가능성이 높다고 분석하고 있습니다.`,
-          sources: 12,
-          keyPoints: ['급격한 관심 증가', 'SNS 활발한 논의', '중장기적 이슈로 전망'],
-        };
+interface TrendingDetailData {
+  id: number;
+  region: string;
+  rank: number;
+  approx_traffic: string;
+  createdAt: string | null;
+  llmResult: LLMResult;
+}
+
+export function TrendingDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [data, setData] = useState<TrendingDetailData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTrendingDetail = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/trend/${id}`);
+        console.log('API Response:', response.data); // Add this line to debug
+        setData(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('트렌드 상세 정보를 불러오는 중 오류 발생:', err);
+        setError('트렌드 상세 정보를 불러오는 데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchTrendingDetail();
     }
+  }, [id]);
+
+  const handleBack = () => {
+    navigate(-1);
   };
 
-  const aiSummary = getAISummary();
+  // 날짜 포맷 함수
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return '데이터 없음';
+    
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}.${month}.${day} ${hours}:${minutes}`;
+  };
 
-  // Mock related articles
-  const relatedArticles = [
-    { title: '관련 기사 1: ' + data.title + ' 상세 분석', source: '뉴스 A', time: '1시간 전' },
-    { title: '관련 기사 2: ' + data.title + ' 여론 반응', source: '뉴스 B', time: '2시간 전' },
-    { title: '관련 기사 3: 전문가 의견 종합', source: '뉴스 C', time: '3시간 전' },
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-2 text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Mock trend chart data
+  if (error || !data) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center text-red-500">
+          {error || '데이터를 불러올 수 없습니다.'}
+        </div>
+      </div>
+    );
+  }
+
+  // AI 요약 정보
+  const aiSummary = {
+    summary: data.llmResult.content || 'AI 분석 내용이 없습니다.',
+    sources: data.llmResult.refered?.length || 0,
+    keyPoints: data.llmResult.tags?.slice(0, 3) || []
+  };
+
+  // 관련 기사 목록
+  const relatedArticles = data.llmResult.refered?.map((source, index) => ({
+    title: `관련 기사 ${index + 1}: ${data.llmResult.keyword} 관련 기사`,
+    source: source || '뉴스 출처',
+    time: '최근'
+  })) || [];
+
+  // 트렌드 차트 데이터 (API에 따라 수정 필요)
   const chartData = [
     { time: '00:00', value: 20 },
     { time: '04:00', value: 35 },
     { time: '08:00', value: 55 },
-    { time: '12:00', value: 100 },
-    { time: '16:00', value: 85 },
+    { time: '12:00', value: 80 },
+    { time: '16:00', value: 100 },
     { time: '20:00', value: 75 },
-    { time: '24:00', value: 90 },
+    { time: '24:00', value: 60 },
   ];
 
   const maxValue = Math.max(...chartData.map((d) => d.value));
@@ -64,7 +120,7 @@ export function TrendingDetail({ data, onBack }: TrendingDetailProps) {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <button
-          onClick={onBack}
+          onClick={handleBack}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
         >
           <ArrowLeft size={20} />
@@ -83,8 +139,9 @@ export function TrendingDetail({ data, onBack }: TrendingDetailProps) {
                   {data.category}
                 </span>
               </div>
-              <h1 className="text-blue-600 mb-4">{data.title}</h1>
+              <h1 className="text-blue-600 mb-4">{data.llmResult.keyword}</h1>
             </div>
+            
             <div className="flex gap-2">
               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <Share2 size={20} className="text-gray-600" />
@@ -95,33 +152,50 @@ export function TrendingDetail({ data, onBack }: TrendingDetailProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6 mb-6">
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <div className="flex gap-6 mb-6">
+            <div className="flex-1 p-4 bg-gray-50 rounded-lg">
               <p className="text-gray-600 text-sm mb-1">검색량</p>
-              <p className="text-gray-900">{data.searchVolume}</p>
+              <p className="text-gray-900">{data.approx_traffic || 'N/A'}</p>
             </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <p className="text-gray-600 text-sm mb-1">급상승률</p>
-              <div className="flex items-center justify-center gap-1 text-green-600">
-                <TrendingUp size={16} />
-                <span>+{data.growthRate.toLocaleString()}%</span>
-              </div>
-            </div>
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-gray-600 text-sm mb-1">데이터 기준</p>
-              <p className="text-gray-900 text-sm">24시간</p>
+            <div className="flex-1 p-4 bg-gray-50 rounded-lg">
+              <p className="text-gray-600 text-sm mb-1">데이터 시간</p>
+              <p className="text-gray-900 text-sm">
+                {formatDate(data.createdAt)}
+              </p>
             </div>
           </div>
 
-          <div className="mb-6">
-            <h3 className="mb-3">검색어 설명</h3>
-            <p className="text-gray-700">{data.description}</p>
+          {/* AI Summary Card */}
+        <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-8 mb-6">
+          
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+              <Sparkles size={20} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-purple-900">AI 제공 레포트</h2>
+            </div>
           </div>
-
+          <div className="flex items-center gap-3 mb-4">
+            <div>
+              <h2 className="text-purple-900">AI 한줄 요약</h2>
+            </div>
+          </div>
+          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-6 mb-4">
+            <p className="text-gray-700">{data.llmResult.description || '상세 설명이 없습니다.'}</p>
+          </div>
+          <div>
+            <h2 className="text-purple-900">기사 전체 요약</h2>
+          </div>
+          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-6 mb-4">
+            <p className="text-gray-800 leading-relaxed">{aiSummary.summary}</p>
+          </div>
+        </div>
+        
           <div className="mb-6">
             <h3 className="mb-3">관련 태그</h3>
             <div className="flex gap-2 flex-wrap">
-              {data.tags.map((tag, index) => (
+              {data.llmResult.tags?.map((tag, index) => (
                 <span
                   key={index}
                   className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full"
@@ -149,37 +223,6 @@ export function TrendingDetail({ data, onBack }: TrendingDetailProps) {
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* AI Summary Card */}
-        <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-8 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-              <Sparkles size={20} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-purple-900">AI 요약</h2>
-              <p className="text-sm text-purple-700">{aiSummary.sources}개 기사를 분석했습니다</p>
-            </div>
-          </div>
-
-          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-6 mb-4">
-            <p className="text-gray-800 leading-relaxed">{aiSummary.summary}</p>
-          </div>
-
-          <div>
-            <h4 className="text-purple-900 mb-3">핵심 포인트</h4>
-            <div className="space-y-2">
-              {aiSummary.keyPoints.map((point, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-white text-xs">{index + 1}</span>
-                  </div>
-                  <p className="text-gray-800">{point}</p>
-                </div>
-              ))}
             </div>
           </div>
         </div>

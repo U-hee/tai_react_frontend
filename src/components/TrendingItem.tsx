@@ -9,14 +9,29 @@ export interface TrendingData {
   growthRate: number;
   description: string;
   tags: string[];
+  createdAt: string;
 }
 
 interface TrendingItemProps {
   data: TrendingData;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 export function TrendingItem({ data, onClick }: TrendingItemProps) {
+  // 날짜 포맷 함수
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}.${month}.${day} ${hours}:${minutes}`;
+  };
+
   return (
     <div
       onClick={onClick}
@@ -54,6 +69,7 @@ export function TrendingItem({ data, onClick }: TrendingItemProps) {
               </span>
             ))}
           </div>
+          <p className="text-gray-500 text-sm mt-2">{formatDate(data.createdAt)}</p>
         </div>
       </div>
     </div>

@@ -1,121 +1,87 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SearchHeader } from './SearchHeader';
 import { FilterBar } from './FilterBar';
-import { TrendingItem, TrendingData } from './TrendingItem';
+import { TrendingItem } from './TrendingItem';
+import api from '../api/axiosConfig';
 
-interface TrendingListProps {
-  onItemClick: (id: number) => void;
+interface TrendingData {
+  id: number;
+  region: string;
+  rank: number;
+  keyword: string;
+  description: string;
+  approx_traffic: string;
+  category: string;
+  tags: string[];
+  createdAt: string;
 }
 
-const mockData: TrendingData[] = [
-  {
-    id: 1,
-    rank: 1,
-    title: '손흥민 해트트릭',
-    searchVolume: '130K+',
-    category: '스포츠',
-    growthRate: 5200,
-    description: '토트넘의 손흥민이 프리미어리그 경기에서 시즌 첫 해트트릭을 기록했습니다. 팀의 4-1 대승을 이끌며 리그 1위로 올라섰습니다.',
-    tags: ['토트넘', '프리미어리그', '축구'],
-  },
-  {
-    id: 2,
-    rank: 2,
-    title: 'GPT-5 출시',
-    searchVolume: '250K+',
-    category: '기술',
-    growthRate: 4200,
-    description: 'OpenAI가 차세대 AI 모델 GPT-5를 공식 출시했습니다. 이전 버전 대비 추론 능력이 크게 향상되었으며, 멀티모달 기능이 강화되어 이미지, 영상, 음성을 더욱 정교하게 처리할 수 있습니다.',
-    tags: ['OpenAI', '인공지능', '챗GPT'],
-  },
-  {
-    id: 3,
-    rank: 3,
-    title: '2025 서울 모빌리티 쇼',
-    searchVolume: '500K+',
-    category: '자동차',
-    growthRate: 3500,
-    description: '서울 강남구 코엑스에서 2025 서울 모빌리티 쇼가 개최되어 최신 전기차와 자율주행 기술이 공개되었습니다. 현대차, 기아 등 주요 자동차 제조사들이 참가하여 미래 모빌리티 기술을 선보였습니다.',
-    tags: ['전기차', '코엑스', '자율주행'],
-  },
-  {
-    id: 4,
-    rank: 4,
-    title: '아이유 컴백',
-    searchVolume: '180K+',
-    category: '연예',
-    growthRate: 3100,
-    description: '가수 아이유가 2년 만에 정규 앨범으로 컴백합니다. 타이틀곡은 유명 프로듀서와 협업한 감성 발라드곡으로 알려졌습니다.',
-    tags: ['아이유', '컴백', 'K-POP'],
-  },
-  {
-    id: 5,
-    rank: 5,
-    title: '비트코인 신고가',
-    searchVolume: '220K+',
-    category: '기술',
-    growthRate: 2800,
-    description: '비트코인이 사상 최고가를 경신하며 10만 달러를 돌파했습니다. 기관 투자자들의 유입과 비트코인 ETF 승인이 주요 원인으로 분석됩니다.',
-    tags: ['비트코인', '암호화폐', '투자'],
-  },
-  {
-    id: 6,
-    rank: 6,
-    title: '서울 첫눈',
-    searchVolume: '95K+',
-    category: '날씨',
-    growthRate: 2500,
-    description: '서울에 올 겨울 첫눈이 내렸습니다. 평년보다 5일 늦은 첫눈으로, 중부지방에는 최대 3cm의 적설량이 예상됩니다.',
-    tags: ['첫눈', '날씨', '겨울'],
-  },
-  {
-    id: 7,
-    rank: 7,
-    title: '삼성 갤럭시 S26 공개',
-    searchVolume: '170K+',
-    category: '기술',
-    growthRate: 2300,
-    description: '삼성전자가 플래그십 스마트폰 갤럭시 S26 시리즈를 공개했습니다. AI 기능이 대폭 강화되고 배터리 수명이 개선되었습니다.',
-    tags: ['삼성', '갤럭시', '스마트폰'],
-  },
-  {
-    id: 8,
-    rank: 8,
-    title: '한일 정상회담',
-    searchVolume: '140K+',
-    category: '정치',
-    growthRate: 2100,
-    description: '한국과 일본 정상이 도쿄에서 회담을 갖고 양국 관계 개선과 경제 협력 방안을 논의했습니다.',
-    tags: ['정상회담', '외교', '한일관계'],
-  },
-];
-
-export function TrendingList({ onItemClick }: TrendingListProps) {
-  const [timeFilter, setTimeFilter] = useState('24h');
+export function TrendingList() {
+  const navigate = useNavigate();
+  
+  const handleItemClick = (id: number) => {
+    navigate(`/trend/${id}`);
+  };
+  const [timeFilter, setTimeFilter] = useState('0');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [sortFilter, setSortFilter] = useState('growth');
+  const [sortFilter, setSortFilter] = useState('rank');
+  const [trends, setTrends] = useState<TrendingData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredData = useMemo(() => {
-    let filtered = [...mockData];
+  useEffect(() => {
+    const fetchTrends = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/trend');
+        setTrends(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('트렌드 데이터를 불러오는 중 오류 발생:', err);
+        setError('트렌드 데이터를 불러오는 데 실패했습니다. 나중에 다시 시도해주세요.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Category filter
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter((item) => item.category === categoryFilter);
+    fetchTrends();
+  }, []);
+
+  const filteredData = trends.filter(trend => {
+    // 시간 필터 적용
+    if (trend.createdAt) {
+      const trendDate = new Date(trend.createdAt);
+      const currentDate = new Date();
+      const hoursAgo = parseInt(timeFilter);
+      
+      // N시간 전의 시간대 계산
+      const targetDate = new Date(currentDate);
+      targetDate.setHours(currentDate.getHours() - hoursAgo);
+      
+      // N시간 전의 시간대와 일치하는지 확인
+      const isSameHour = 
+        trendDate.getFullYear() === targetDate.getFullYear() &&
+        trendDate.getMonth() === targetDate.getMonth() &&
+        trendDate.getDate() === targetDate.getDate() &&
+        trendDate.getHours() === targetDate.getHours();
+      
+      if (!isSameHour) return false;
     }
-
-    // Sort filter
-    if (sortFilter === 'growth') {
-      filtered.sort((a, b) => b.growthRate - a.growthRate);
+    
+    // 카테고리 필터 적용
+    if (categoryFilter === 'all') return true;
+    return trend.category === categoryFilter;
+  }).sort((a, b) => {
+    if (sortFilter === 'rank') {
+      return a.rank - b.rank;
     } else if (sortFilter === 'volume') {
-      filtered.sort((a, b) => {
-        const aVolume = parseInt(a.searchVolume.replace(/[^0-9]/g, ''));
-        const bVolume = parseInt(b.searchVolume.replace(/[^0-9]/g, ''));
-        return bVolume - aVolume;
-      });
+      const aVolume = parseInt(a.approx_traffic.replace(/[^0-9]/g, '') || '0');
+      const bVolume = parseInt(b.approx_traffic.replace(/[^0-9]/g, '') || '0');
+      return bVolume - aVolume;
     }
-
-    return filtered;
-  }, [categoryFilter, sortFilter]);
+    return 0;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -131,14 +97,38 @@ export function TrendingList({ onItemClick }: TrendingListProps) {
         />
 
         <div className="mb-6">
-          <p className="text-gray-600">2025년 10월 27일 오후 12:24</p>
+          <p className="text-gray-600">{new Date().toLocaleString()}</p>
           <p className="text-gray-600">{filteredData.length}개의 급상승 검색어</p>
         </div>
 
         <div className="space-y-4">
-          {filteredData.map((item) => (
-            <TrendingItem key={item.id} data={item} onClick={() => onItemClick(item.id)} />
-          ))}
+          {loading ? (
+            <div className="text-center py-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+              <p className="mt-2 text-gray-600">로딩 중...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-10 text-red-500">
+              {error}
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">
+              표시할 트렌드가 없습니다.
+            </div>
+          ) : (
+            filteredData.map((item) => (
+              <div key={item.id} onClick={() => handleItemClick(item.id)}>
+                <TrendingItem 
+                  data={{
+                    ...item,
+                    title: item.keyword,
+                    searchVolume: item.approx_traffic,
+                    growthRate: 0,
+                  }} 
+                />
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
