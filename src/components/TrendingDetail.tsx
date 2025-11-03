@@ -206,7 +206,7 @@ export function TrendingDetail() {
             </div>
           </div>
 
-          {/* Trend Chart */}
+          {/* Trend Chart
           <div>
             <h3 className="mb-4">검색량 추이 (24시간)</h3>
             <div className="bg-gray-50 rounded-lg p-6">
@@ -225,7 +225,7 @@ export function TrendingDetail() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Related Articles */}
         <div className="bg-white border border-gray-200 rounded-xl p-8">
