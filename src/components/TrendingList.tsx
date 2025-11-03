@@ -131,7 +131,9 @@ export function TrendingList() {
                     ...item,
                     title: item.keyword,
                     searchVolume: item.approx_traffic,
-                    growthRate: 0,
+                    growthRate: Number(
+                      item.approx_traffic.replace("+", "").replace(",", "")
+                    ),
                   }}
                 />
               </div>
