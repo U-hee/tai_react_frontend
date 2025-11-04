@@ -4,6 +4,8 @@ import { SearchHeader } from "./SearchHeader";
 import { FilterBar } from "./FilterBar";
 import { TrendingItem } from "./TrendingItem";
 import api from "../api/axiosConfig";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 
 interface TrendingData {
   id: number;
@@ -23,18 +25,29 @@ export function TrendingList() {
   const handleItemClick = (id: number) => {
     navigate(`/trend/${id}`);
   };
-  const [timeFilter, setTimeFilter] = useState("0");
+  const now = new Date();
+  const [year, setYear] = useState<number>(now.getFullYear());
+  const [month, setMonth] = useState<number>(now.getMonth() + 1); // 1-12
+  const [day, setDay] = useState<number>(now.getDate());
+  const [timeFilter, setTimeFilter] = useState(String(now.getHours()).padStart(2, "0"));
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortFilter, setSortFilter] = useState("rank");
   const [trends, setTrends] = useState<TrendingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 선택한 연/월/일과 시간 필터로 타겟 시각 구성
+  const getTargetDate = (): Date => {
+    const selectedHour = parseInt(timeFilter, 10) || 0;
+    return new Date(year, month - 1, day, selectedHour, 0, 0);
+  };
+
   useEffect(() => {
     const fetchTrends = async () => {
       try {
         setLoading(true);
-        const response = await api.get("/trend");
+        const formatted = format(getTargetDate(), "yyyy-MM-dd'T'HH:mm:ss");
+        const response = await api.get(`/trend?targetDate=${encodeURIComponent(formatted)}`);
         setTrends(response.data);
         setError(null);
       } catch (err) {
@@ -48,29 +61,20 @@ export function TrendingList() {
     };
 
     fetchTrends();
-  }, []);
+  }, [year, month, day, timeFilter]);
 
   const filteredData = trends
     .filter((trend) => {
-      // 시간 필터 적용
-      if (trend.createdAt) {
-        const trendDate = new Date(trend.createdAt);
-        const currentDate = new Date();
-        const hoursAgo = parseInt(timeFilter);
-
-        // N시간 전의 시간대 계산
-        const targetDate = new Date(currentDate);
-        targetDate.setHours(currentDate.getHours() - hoursAgo);
-
-        // N시간 전의 시간대와 일치하는지 확인
-        const isSameHour =
-          trendDate.getFullYear() === targetDate.getFullYear() &&
-          trendDate.getMonth() === targetDate.getMonth() &&
-          trendDate.getDate() === targetDate.getDate() &&
-          trendDate.getHours() === targetDate.getHours();
-
-        if (!isSameHour) return false;
-      }
+      // 시간대를 클라이언트에서도 엄격히 검증 (서버가 시간 무시 시 대비)
+      if (!trend.createdAt) return false;
+      const td = new Date(trend.createdAt);
+      const gd = getTargetDate();
+      const sameHour =
+        td.getFullYear() === gd.getFullYear() &&
+        td.getMonth() === gd.getMonth() &&
+        td.getDate() === gd.getDate() &&
+        td.getHours() === gd.getHours();
+      if (!sameHour) return false;
 
       // 카테고리 필터 적용
       if (categoryFilter === "all") return true;
@@ -102,10 +106,23 @@ export function TrendingList() {
           onTimeFilterChange={setTimeFilter}
           onCategoryFilterChange={setCategoryFilter}
           onSortFilterChange={setSortFilter}
+          year={year}
+          month={month}
+          day={day}
+          onYearChange={setYear}
+          onMonthChange={setMonth}
+          onDayChange={setDay}
+          onResetToNow={() => {
+            const n = new Date();
+            setYear(n.getFullYear());
+            setMonth(n.getMonth() + 1);
+            setDay(n.getDate());
+            setTimeFilter(String(n.getHours()).padStart(2, "0"));
+          }}
         />
 
         <div className="mb-6">
-          <p className="text-gray-600">{new Date().toLocaleString()}</p>
+          <p className="text-gray-600">{format(getTargetDate(), "yyyy년 M월 d일 (E) a h시", { locale: ko })} 기준</p>
           <p className="text-gray-600">
             {filteredData.length}개의 급상승 검색어
           </p>
